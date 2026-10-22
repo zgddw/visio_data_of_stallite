@@ -34,9 +34,9 @@ class PlotWorker(QThread):
     def run(self):
         try:
             satellite = self.config['satellite']
-            selected_events = self.config['selected_events'] 
+            selected_events = self.config['selected_events']
             out_path = self.config['out_path']
-            flags = self.config['plot_flags'] 
+            flags = self.config['plot_flags']
            
             total_count = len(selected_events)
             self.progress.emit(f"🔥 [参数精细化批处理启动] 目标卫星: {satellite}，共 {total_count} 个区间...")
@@ -68,7 +68,7 @@ class PlotWorker(QThread):
                     if flags['mag_bt'] or flags['mag_comp'] or flags['mag_ang'] or flags['pro_beta']:
                         if satellite == "WIND" :
                             raw_mag_var = "BGSE"
-                            mag_cdf_type = "wi_h0_mfi"  
+                            mag_cdf_type = "wi_h0_mfi"
                         elif satellite == "PSP" :
                             raw_mag_var = "psp_fld_l2_mag_RTN_1min"
                             mag_cdf_type = "psp_fld_l2_mag_rtn_1min"
@@ -77,7 +77,7 @@ class PlotWorker(QThread):
                             mag_cdf_type = "ac_h0_mfi"
                         elif satellite == "SOLO" :
                             raw_mag_var = "B_RTN"
-                            mag_cdf_type = "solo_l2_mag-rtn-normal" 
+                            mag_cdf_type = "solo_l2_mag-rtn-normal"
                             
 
                         magdata = cdfdataread(self.config['mag_path'], [raw_mag_var], search_start, search_end, mag_cdf_type)
@@ -92,7 +92,7 @@ class PlotWorker(QThread):
                                 magdata["phi"]   = pd.DataFrame({'t': df_bt['t'].values, 'phi': phi})
                     if flags['ele_ne']:
                         if satellite == "WIND":
-                            raw_ele_var = "elect_density"  
+                            raw_ele_var = "elect_density"
                             ele_cdf_type = "wi_k0_3dp"
                         if satellite == "PSP":
                             raw_ele_var = "Electron_Counts_ChanE"
@@ -106,9 +106,9 @@ class PlotWorker(QThread):
                         eledata = cdfdataread(self.config['ele_path'], [raw_ele_var], search_start, search_end, ele_cdf_type)
                     if flags['pro_np'] or flags['pro_vp'] or flags['pro_tp'] or flags['pro_beta']:
                         if satellite == "WIND":
-                            raw_pro_vars = ["P_DENS","P_VELS","P_TEMP"]  
+                            raw_pro_vars = ["P_DENS","P_VELS","P_TEMP"]
                             pro_cdf_type = "wi_pm_3dp"
-                        if satellite == "PSP": 
+                        if satellite == "PSP":
                             raw_pro_vars = ["np_moment","vp_moment_RTN","wp_moment"]
                             pro_cdf_type = "psp_swp_spc_l3i"
                         if satellite == "ACE":
@@ -140,17 +140,17 @@ class PlotWorker(QThread):
                             del prodata[tmeppv]
 
                         if {flags['pro_beta'] and ("Btotal_calculated" in magdata)} or flags['pro_tp']:
-                            if satellite == "WIND" : 
+                            if satellite == "WIND" :
                                 tmepnp = "P_DENS"
                                 tmeptp = "P_TEMP"
-                            if satellite == "PSP" : 
+                            if satellite == "PSP" :
                                 tmepnp = "np_moment"
                                 tmeptp = 'P_TEMP'
-                            if satellite == "ACE" : 
+                            if satellite == "ACE" :
                                 tmepnp = "Np"
                                 tmeptp = "Tpr"
-                            if satellite == "AOLO" :
-                                tmepnp = "V_RTN"
+                            if satellite == "SOLO" :
+                                tmepnp = "N"
                                 tmeptp = "T"
 
                             df_n = prodata.get(tmepnp)
@@ -161,11 +161,11 @@ class PlotWorker(QThread):
                                 prodata["Pdy"]  = pd.DataFrame({'t': calc_time, 'Pdy': res_beta['Pth']})
                                 prodata["beta"] = pd.DataFrame({'t': calc_time, 'beta': res_beta['beta']})
                     particle_modes = self.config.get('particle_modes', {})
-                    if any(mode != 0 for mode in particle_modes.values()): 
+                    if any(mode != 0 for mode in particle_modes.values()):
                         # 根据卫星设置变量和前缀
                         if satellite == "WIND":
                             sms_vars = ["n_tc_he2plus", "n_tc_o6plus", "n_tc_fe10plus", "n_tc_cplus"]  # 根据实际CDF调整
-                            sms_prefix = "wi_l2_3min_sms" 
+                            sms_prefix = "wi_l2_3min_sms"
                         if satellite == "ACE":
                             sms_vars = ["flux_He", "flux_O", "flux_Fe", "flux_C"]  # 根据实际CDF调整
                             sms_prefix = "ac_h1_sis"
@@ -191,11 +191,14 @@ class PlotWorker(QThread):
                         if "phi" in magdata: final_mag["phi"] = magdata["phi"]
                     
                     final_pro = {}
-                    if flags['pro_np'] and ("P_DENS" in prodata or "np_moment" in prodata):
+                    if flags['pro_np'] and ("P_DENS" in prodata 
+                                            or "np_moment" in prodata
+                                            or "Np" in prodata
+                                            or "N" in prodata):
                         if satellite == "WIND" : k = "P_DENS"
                         if satellite == "PSP" : k = "np_moment"
                         if satellite == "ACE" : k = "Np"
-                        if satellite == "SOLO" : k = "V_RTN"
+                        if satellite == "SOLO" : k = "N"
                         final_pro[k] = prodata[k]
                     if flags['pro_vp'] and "Vp_calculated" in prodata: final_pro["Vp_calculated"] = prodata["Vp_calculated"]
                     if flags['pro_tp'] and tmeptp in prodata: final_pro[tmeptp]  =prodata[tmeptp]

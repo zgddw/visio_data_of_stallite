@@ -1,0 +1,70 @@
+PSP / SolO 完整 ICME 十面板相空间密度绘图版
+==========================================
+
+安装位置
+--------
+将压缩包内 5 个 .py 文件解压到新文件夹：
+E:\ZhaoWenjin_Reserch\anaysis_prog\PSP_SOLO_完整ICME十面板_PSD版\
+请保持 5 个 .py 文件在同一目录。不要覆盖现有的 SOLO_NM3D_PSD 或 PSP 旧程序。
+pro_of_read.py 保持在 E:\ZhaoWenjin_Reserch\anaysis_prog\ 即可，入口程序按需延迟导入。
+
+绘图范围与标记
+--------------
+从激波（若有）、堆积区、ICME 本体的时间中取最早和最晚时刻，
+在这个“整体事件跨度”的两端各延长 15%。
+十个面板均用灰色阴影标示密度堆积区，红色竖线标示 ICME 起止，
+绿色竖线标示激波（事件表没有激波时间则不画）。
+第一面板仍显示逐时刻的 BDE 候选点，但不计算 BDE 时间占比，也不输出占比 CSV。
+只保存 PNG，不弹出绘图窗口，不保存 PDF。
+
+修改留白比例
+------------
+在两个入口脚本各自的 CONFIG 中改 PLOT_CONTEXT_RATIO：
+0.10 = 两端各延长整体事件跨度的 10%；0.15 = 默认；0.20 = 各延长 20%。
+也可运行时加 --context-ratio 0.20，不必编辑文件。
+若想固定时长，用 --context-hours 2（两端各 2 小时）；这个选项优先于比例。
+即使设置 0，仍至少保留 5 分钟边距，以显示边界竖线。
+
+PSP 能量范围
+------------
+默认 70–2000 eV；可在 PSP 入口 CONFIG 的 PAD_ENERGY_RANGE_EV 修改，
+或命令行加 --energy-range 100 3000。输出 PAD 为相空间密度 PSD。
+
+SolO 能量范围
+-------------
+默认最低 70 eV、最高不限；可在 SolO 入口 CONFIG 的
+PAD_MIN_ENERGY_EV / PAD_MAX_ENERGY_EV 修改，
+或命令行加 --min-energy 100 --max-energy 3000。
+SolO NM3D PSD 读取器读取 H:\solo\swa 下按年份存放的本地文件；
+用 --offline 时不向 NASA 查询/下载，本地无数据的时间段会显示为空白。
+
+运行示例（PowerShell）
+---------------------
+先进入新文件夹：
+cd E:\ZhaoWenjin_Reserch\anaysis_prog\PSP_SOLO_完整ICME十面板_PSD版
+
+PSP 单事件测试：
+& D:\app\conda\python.exe .\PSP_ICME_density_pileup_plot.py --event-id ICME_PSP_MOESTL_20230310_01
+
+SolO 单事件离线测试：
+& D:\app\conda\python.exe .\SOLO_ICME_density_pileup_plot.py --event-id ICME_SOLO_MOESTL_20210510_01 --offline
+
+改成 20% 留白的示例：
+& D:\app\conda\python.exe .\SOLO_ICME_density_pileup_plot.py --event-id ICME_SOLO_MOESTL_20210510_01 --offline --context-ratio 0.20
+
+省略 --event-id 则逐个绘制事件表中的全部有效事件。默认事件表位置：
+E:\ZhaoWenjin_Reserch\anaysis_prog\ICME_density_pileup_search_PSP_SOLO\结果_PSP_多参数密度堆积区\PSP_ICME_密度堆积区列表.csv
+E:\ZhaoWenjin_Reserch\anaysis_prog\ICME_density_pileup_search_PSP_SOLO\结果_SOLO_多参数密度堆积区\SOLO_ICME_密度堆积区列表.csv
+也可用 --table 指定别的事件表。表中需要 Pileup_Start_UTC、Pileup_End_UTC、
+ICME_Start_UTC、ICME_End_UTC；Shock_Time_UTC 可为空或没有这一列。
+
+PNG 和综合图像生成清单.csv 分别输出至新文件夹下的 综合图像_PSP / 综合图像_SOLO；
+可用 --output-dir 指定其他目录。若某事件失败，会生成绘图失败清单.csv。
+如果感觉卡住，请看终端最后一条 [延迟导入]、[PAD]、[绘图] 或 [保存] 日志；
+SolO 首先用 --offline 测试，可区分本地读盘与 NASA 网络超时。
+
+实测
+----
+2023-03-10 PSP 事件：生成 PNG，约 5 秒。
+2021-05-10 SolO 事件：--offline 生成 PNG，约 25 秒。
+实测环境为 D:\app\conda\python.exe；其他环境需安装 numpy、pandas、matplotlib、spacepy 等原程序依赖。

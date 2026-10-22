@@ -358,7 +358,11 @@ def build_datasets_multires(data_dict):
 def data_download(base_dir, dataset, years):
     # 初始化 NASA 客户端
     cdas = CdasWs()
-    
+    # 创建一个自定义的 Session，并设置其不信任环境变量（即不使用系统代理）
+    import requests
+    session_no_proxy = requests.Session()
+    session_no_proxy.trust_env = False
+    cdas.session = session_no_proxy
     # --------------------------------------------------
     # 阶段一：收集文件，规划存储路径（按月细化 + 全局抗断网版）
     # --------------------------------------------------
@@ -452,7 +456,7 @@ def data_download(base_dir, dataset, years):
         print(f"[{idx}/{total_files}] 目标: /{task['year']}/ -> {file_name}")
         
         try:
-            head_res = session.head(url, timeout=15)
+            head_res = session_no_proxy.head(url, timeout=15)
             remote_size = int(head_res.headers.get('content-length', 0))
             task['remote_size'] = remote_size
             
@@ -463,7 +467,7 @@ def data_download(base_dir, dataset, years):
                 else:
                     os.remove(save_path)
             
-            response = session.get(url, stream=True, timeout=(30, 90))
+            response = session_no_proxy.get(url, stream=True, timeout=(30, 90))
             response.raise_for_status()
             
             with open(save_path, 'wb') as f, tqdm(

@@ -1,0 +1,2 @@
+﻿Satellite,Event_ID,Pileup_Start_UTC,Pileup_End_UTC,Error
+SOLO,ICME_SOLO_MOESTL_20210925_01,2021-09-26 08:44:00,2021-09-26 10:41:00,ValueError: cdfdataread 没有返回有效的 'B_RTN' 数据。请检查文件路径、前缀和变量名。
