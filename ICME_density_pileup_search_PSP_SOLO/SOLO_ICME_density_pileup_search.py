@@ -4,7 +4,7 @@ SOLO 多参数 ICME 密度堆积区自动检索
 ========================================
 
 检索规则：
-1. 有激波：检索范围 = 激波时刻 -> ICME 本体前 20% 的终点；
+1. 有激波：检索范围 = 激波时刻 + 鞘层时长 D 的可配置比例（默认 2%） -> ICME 本体前 20% 的终点；
    无激波：检索范围 = ICME 本体开始前“本体时长的 20%” -> 本体前 20% 的终点。
    候选区不得延伸到 ICME 本体中段或尾部；前后 2 小时仅用于判据参照数据读取。
 2. 候选窗口从整个检索范围的最大长度开始，以 1 分钟逐步缩短至 5 分钟；
@@ -84,6 +84,7 @@ STEP_MINUTES = 1
 MIN_COVERAGE = 0.90            # 候选区和两侧参照区，各参数均需达到 90% 有效覆盖率
 MAX_GAP_BETWEEN_REGIONS_MINUTES = 120  # 同一 ICME 内候选区最大合并间隔；可改为 60、90、180 等
 MAX_BODY_FRACTION = 0.20      # 检索终点：最多进入 ICME 本体前 20%
+SHOCK_MARGIN_FRACTION = 0.02  # 有激波起点：激波时刻 + 该比例 × D；D = 本体开始 - 激波时刻。改这里即可调整 2%
 NO_SHOCK_PRE_BODY_FRACTION = 0.20  # 无激波时：从本体开始前“本体时长的 20%”起搜索
 WRITE_XLSX = True
 
@@ -912,7 +913,13 @@ def compute_search_bounds(event: dict) -> Tuple[pd.Timestamp, pd.Timestamp]:
         raise ValueError("NO_SHOCK_PRE_BODY_FRACTION 必须在 (0, 1] 内")
     shock = event.get("shock_time", pd.NaT)
     if event["has_shock"] and pd.notna(shock) and shock < body_start:
-        search_start = shock.floor("min")
+        if not 0 <= SHOCK_MARGIN_FRACTION <= 1:
+            raise ValueError("SHOCK_MARGIN_FRACTION 必须在 [0, 1] 内")
+        # D 是激波到 ICME 本体起始的鞘层时长；向上取整，避免分钟网格重新包含被排除的激波附近数据。
+        sheath_duration = body_start - shock
+        search_start = (shock + sheath_duration * SHOCK_MARGIN_FRACTION).ceil("min")
+        if SHOCK_MARGIN_FRACTION == 0:
+            search_start = shock.floor("min")  # 设为 0 时恢复原有激波起点行为
     else:
         search_start = (body_start - duration * NO_SHOCK_PRE_BODY_FRACTION).floor("min")
     # Floor to a complete minute: ceil would allow a candidate beyond the limit.
@@ -1015,7 +1022,7 @@ def main() -> None:
         raise RuntimeError("事件列表文件存在，但没有解析到有效 ICME 事件。请检查每行是否包含至少两个时间戳。")
     print(f"\n[{SATELLITE}] 共 {len(events)} 个 ICME 事件；窗口从最大长度递减到 {MIN_WINDOW_MINUTES} 分钟。")
     print(f"同一 ICME 默认只保留一个候选区；相邻候选间隔阈值={MAX_GAP_BETWEEN_REGIONS_MINUTES} 分钟。")
-    print(f"检索终点：本体开始 + 本体时长的 {MAX_BODY_FRACTION:.0%}；无激波起点：本体开始 - 本体时长的 {NO_SHOCK_PRE_BODY_FRACTION:.0%}。")
+    print(f"有激波起点：激波 + 鞘层时长 D 的 {SHOCK_MARGIN_FRACTION:.0%}；检索终点：本体开始 + 本体时长的 {MAX_BODY_FRACTION:.0%}；无激波起点：本体开始 - 本体时长的 {NO_SHOCK_PRE_BODY_FRACTION:.0%}。")
     print("注意：Beta 使用总磁场模长计算；第三项磁场判据使用 RTN-T 分量绝对值 |B_T|；数据覆盖率不足的窗口不参与判定。\n")
 
     all_event_rows: List[dict] = []

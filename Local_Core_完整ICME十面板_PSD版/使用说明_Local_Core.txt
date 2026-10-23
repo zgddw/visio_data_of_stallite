@@ -1,0 +1,34 @@
+Local_Core 完整 ICME 十面板图（PSP / SolO）
+
+本目录是独立绘图程序，不覆盖原来的主堆积区绘图程序。
+使用检索结果表中的 Local_Core_Start_UTC、Local_Core_End_UTC 画灰色阴影；
+红色竖线仍表示 ICME 本体起止，绿色竖线表示激波（无激波事件不画绿线）。
+横轴覆盖完整事件，并默认在两端各延长事件跨度的 15%。只保存 PNG，不弹出图窗、不保存 PDF。
+
+入口：
+  PSP_Local_Core_完整ICME_plot.py
+  SOLO_Local_Core_完整ICME_plot.py
+
+在本目录的终端先试画一例：
+  python PSP_Local_Core_完整ICME_plot.py --event-id ICME_PSP_MOESTL_20230310_01
+  python SOLO_Local_Core_完整ICME_plot.py --event-id ICME_SOLO_MOESTL_20211030_01 --offline
+
+默认从相邻的 ICME_density_pileup_search_PSP_SOLO/结果_PSP_多参数密度堆积区
+或 结果_SOLO_多参数密度堆积区 目录读取 *_ICME_密度堆积区列表.csv。
+若结果表在别处，使用 --table "完整路径.csv"；只绘制一个事件使用 --event-id。
+
+输出：本目录下 Local_Core_综合图像_PSP / Local_Core_综合图像_SOLO。
+可用 --output-dir 自定义。输出文件名包含 Local_Core，避免与主区间图混淆。
+PSP 默认 PAD 能量窗 70–2000 eV，使用 --energy-range 最低值 最高值 修改。
+SolO 默认只用本地 NM3D PSD，不访问 NASA；使用 --min-energy / --max-energy 修改能量窗。
+新程序中的 SpacePy 只在实际读取 CDF 时加载；启动和 --help 不会预先加载它。
+如果明确需要下载缺失数据，SolO 可加 --allow-download（可能变慢；不要与 --offline 同用）。
+两端延长比例可用 --context-ratio 修改，例如 0.10 或 0.20。
+
+注意：输入表必须有有效的 Local_Core_* 时间列。缺失或超出主区间的核心记录会跳过，
+不会悄悄退回 Pileup_Start_UTC / Pileup_End_UTC。若重新运行了有激波 2% D 的检索，
+请用最新检索结果表绘图；旧表中的 Local_Core 仍是旧检索结果。
+
+测试说明：已对现有 PSP/SolO 结果表读取和合成物理/PAD 数据的十面板 PNG 生成做过测试。
+当前执行环境无法读取 H:/I: 数据盘，因此没有完成真实 CDF 数据测试。目标电脑首次运行时
+建议用 --event-id 单例测试，若读取超过 1 分钟仍无进展，停止并检查日志与数据路径。
